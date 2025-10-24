@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonic Echo Chamber - Interactive Installation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Canvas -->
+        <canvas id="visualizer"></canvas>
+        
+        <!-- Control Panel -->
+        <div id="controls" class="controls">
+            <div class="controls-header">
+                <h1>Sonic Echo Chamber</h1>
+                <p class="subtitle">An Interactive Audio-Visual Installation</p>
+            </div>
+            
+            <div class="control-section">
+                <label for="audioDevice">Audio Input Device:</label>
+                <select id="audioDevice" class="control-select">
+                    <option value="">Select Microphone...</option>
+                    <option value="demo">🎵 Demo Mode (Test Without Mic)</option>
+                </select>
+            </div>
+            
+            <div class="control-section">
+                <label>Visualization Mode:</label>
+                <div class="button-group">
+                    <button class="mode-btn active" data-mode="particles">Echo Particles</button>
+                    <button class="mode-btn" data-mode="waveform">Fluid Waveform</button>
+                    <button class="mode-btn" data-mode="ripples">Radial Ripples</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <label for="sensitivity">Sensitivity:</label>
+                <input type="range" id="sensitivity" min="0.5" max="3" step="0.1" value="1.5">
+                <span id="sensitivityValue">1.5</span>
+            </div>
+            
+            <div class="control-section">
+                <label for="colorScheme">Color Scheme:</label>
+                <select id="colorScheme" class="control-select">
+                    <option value="ethereal">Ethereal (Purple/Blue)</option>
+                    <option value="ocean">Ocean (Teal/Blue)</option>
+                    <option value="sunset">Sunset (Pink/Orange)</option>
+                    <option value="aurora">Aurora (Green/Purple)</option>
+                </select>
+            </div>
+            
+            <div class="control-section">
+                <button id="startBtn" class="start-btn">🎤 Start & Allow Microphone</button>
+                <button id="fullscreenBtn" class="fullscreen-btn">Fullscreen</button>
+            </div>
+            
+            <div class="control-section">
+                <div class="audio-level-container">
+                    <label>Audio Level:</label>
+                    <div class="audio-level-bar">
+                        <div id="audioLevel" class="audio-level-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Instructions Overlay -->
+        <div id="instructions" class="instructions">
+            <div class="instructions-content">
+                <h2>Welcome to Sonic Echo Chamber</h2>
+                <p>An immersive installation exploring sound, memory, and visual echoes.</p>
+                <ul>
+                    <li>Click "Start & Allow Microphone" button</li>
+                    <li>Allow microphone access when browser prompts you</li>
+                    <li>Your microphone will be automatically detected</li>
+                    <li>Choose a visualization mode (Echo Particles, Fluid Waveform, or Radial Ripples)</li>
+                    <li>Make sounds, speak, or sing to create visual echoes</li>
+                    <li>Press 'F' for fullscreen, 'ESC' to exit</li>
+                </ul>
+                <button id="closeInstructions" class="close-btn">Begin</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="audio.js"></script>
+    <script src="visualizations.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

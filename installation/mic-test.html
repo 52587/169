@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microphone Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #16213e;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            color: #4ade80;
+        }
+        .error {
+            color: #f87171;
+        }
+        .info {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎤 Microphone Detection Test</h1>
+    <p>This page will help diagnose microphone detection issues.</p>
+    
+    <button onclick="testDevices()">1. List All Devices</button>
+    <button onclick="requestPermission()">2. Request Microphone Permission</button>
+    <button onclick="testMicrophone()">3. Test Microphone Stream</button>
+    <button onclick="clearOutput()">Clear Output</button>
+    
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${timestamp}] ${message}`;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        async function testDevices() {
+            log('=== Testing Device Enumeration ===', 'info');
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                log(`Total devices found: ${devices.length}`, 'success');
+                
+                devices.forEach((device, index) => {
+                    log(`Device ${index + 1}:`, 'info');
+                    log(`  Kind: ${device.kind}`, 'info');
+                    log(`  Label: ${device.label || '(no label - need permission)'}`, 'info');
+                    log(`  Device ID: ${device.deviceId}`, 'info');
+                });
+
+                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+                log(`\nAudio Input Devices: ${audioInputs.length}`, audioInputs.length > 0 ? 'success' : 'error');
+                
+                if (audioInputs.length === 0) {
+                    log('No audio input devices detected!', 'error');
+                    log('Check Windows Sound Settings → Input', 'error');
+                }
+            } catch (error) {
+                log(`Error enumerating devices: ${error.message}`, 'error');
+            }
+        }
+
+        async function requestPermission() {
+            log('=== Requesting Microphone Permission ===', 'info');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                log('✓ Permission granted!', 'success');
+                
+                const tracks = stream.getTracks();
+                tracks.forEach(track => {
+                    log(`Track: ${track.label} (${track.kind})`, 'success');
+                    log(`  Enabled: ${track.enabled}`, 'info');
+                    log(`  Muted: ${track.muted}`, 'info');
+                    log(`  ReadyState: ${track.readyState}`, 'info');
+                });
+                
+                // Stop the stream
+                tracks.forEach(track => track.stop());
+                log('Stream stopped. Now try "List All Devices" again.', 'info');
+                
+            } catch (error) {
+                log(`✗ Permission denied or error: ${error.name}`, 'error');
+                log(`  Message: ${error.message}`, 'error');
+                
+                if (error.name === 'NotFoundError') {
+                    log('→ No microphone hardware detected', 'error');
+                    log('→ Check Windows Sound Settings', 'error');
+                } else if (error.name === 'NotAllowedError') {
+                    log('→ Permission was denied', 'error');
+                    log('→ Click the lock icon in browser address bar', 'error');
+                }
+            }
+        }
+
+        async function testMicrophone() {
+            log('=== Testing Microphone Stream ===', 'info');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                log('✓ Microphone stream created!', 'success');
+                
+                // Create audio context
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                log(`Audio Context State: ${audioContext.state}`, 'success');
+                log(`Sample Rate: ${audioContext.sampleRate} Hz`, 'info');
+                log('Monitoring audio level for 3 seconds...', 'info');
+                log('(Make some sound near your microphone)', 'info');
+                
+                let maxLevel = 0;
+                const monitor = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    maxLevel = Math.max(maxLevel, average);
+                    log(`  Current level: ${average.toFixed(1)} / Max: ${maxLevel.toFixed(1)}`, 'info');
+                }, 500);
+                
+                setTimeout(() => {
+                    clearInterval(monitor);
+                    stream.getTracks().forEach(track => track.stop());
+                    audioContext.close();
+                    
+                    if (maxLevel > 10) {
+                        log(`✓ Microphone is working! Max level: ${maxLevel.toFixed(1)}`, 'success');
+                    } else {
+                        log(`⚠ Microphone level very low (${maxLevel.toFixed(1)})`, 'error');
+                        log('→ Check microphone volume in Windows Sound Settings', 'error');
+                        log('→ Make sure microphone is not muted', 'error');
+                    }
+                }, 3000);
+                
+            } catch (error) {
+                log(`✗ Error testing microphone: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run on load
+        window.onload = () => {
+            log('Microphone Test Tool Ready', 'success');
+            log('Click buttons above to test your microphone setup', 'info');
+            log('', 'info');
+        };
+    </script>
+</body>
+</html>
